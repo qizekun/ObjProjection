@@ -9,7 +9,7 @@ pip install pandas
 pip install git+https://github.com/openai/CLIP.git
 ```
 
-## ShapeNetCore
+## ShapeNetCore V2
 
 ![figure](figure.png)
 
