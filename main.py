@@ -11,8 +11,23 @@ import os
 import time
 import multiprocessing
 
+path = "/Users/qizekun/Downloads/ShapeNetCore/"
+meta = pd.read_json(path + "shapenet55.json")
+cls_list = meta['describe'].values.tolist()
 
-def render(path="model_normalized.obj", angle=45, size=224):
+acc = []
+acc_detail = []
+p_list = []
+flag = []
+pwd = os.getcwd()
+complete_num = 1
+length = len(cls_list)
+for i in range(length):
+    acc.append([])
+    acc_detail.append([])
+    flag.append(0)
+
+def render(path="model_normalized.obj", angle=45, size=1024):
     viewport = (size, size)
     glfw.init()
     window = glfw.create_window(size, size,'3D Obj File Viewer', None,None)
@@ -80,13 +95,13 @@ def test_clip(model, preprocess, path, cls_list):
     return(probs[0])
     # print("Label probs:", probs)
 
-def main(cls_list, model, preprocess, path, index, row):
+def main(cls_list, path, index, row):
     global acc, acc_detail, complete_num, flag
+    model, preprocess = clip.load("ViT-B/32", device="cpu")
     obj_list = glob.glob(path + "0" + str(row.catalogue) + "/*")
     num = len(obj_list)
     right_num = 0
     for obj_path in obj_list:
-        print(obj_path)
         prediction = []
         for angle in (45, 135, 225, 315):
             os.chdir(obj_path + "/models")
@@ -101,7 +116,7 @@ def main(cls_list, model, preprocess, path, index, row):
             print('wrong!')
             print(obj_path)
         complete_num += 1
-        time.sleep(0.25)
+        time.sleep(1)
         # this_time = time.time()
         # print(f"ETA: {(51300 - complete_num) / complete_num * (this_time - start_time) / 3600} h")
     acc[index] = right_num / num
@@ -110,7 +125,7 @@ def main(cls_list, model, preprocess, path, index, row):
 def moniter(start_time):
     global acc, acc_detail, complete_num, flag, pwd
     while True:
-        time.sleep(10)
+        time.sleep(60)
         this_time = time.time()
         print(f"ETA: {(51300 - complete_num) / complete_num * (this_time - start_time) / 3600} h")
         if sum(flag) == len(flag):
@@ -120,32 +135,30 @@ def moniter(start_time):
             break
 
 if __name__ == "__main__":
-    path = "/Users/qizekun/Downloads/ShapeNetCore/"
-    meta = pd.read_json(path + "shapenet55.json")
-    cls_list = meta['describe'].values.tolist()
-    model, preprocess = clip.load("ViT-B/32", device="cpu")
+    pool_length = 8
 
-    global acc, acc_detail, complete_num, flag, pwd
-    acc = []
-    acc_detail = []
-    p_list = []
-    flag = []
-    pwd = os.getcwd()
-    complete_num = 0
-    length = len(cls_list)
-    for index, row in meta.iterrows():
-        acc.append([])
-        acc_detail.append([])
-        flag.append(0)
-        p_list.append(multiprocessing.Process(target=main, args=(cls_list, model, preprocess, path, index, row)))
-    
     start_time = time.time()
     moniter_process = multiprocessing.Process(target=moniter, args=(start_time, ))
-
-    for i in range(length):
-        p_list[i].start()
     moniter_process.start()
-    
+
+    for index, row in meta.iterrows():
+        if len(p_list) < pool_length:
+            p = multiprocessing.Process(target=main, args=(cls_list, path, index, row))
+            p_list.append(p)
+            p.start()
+        else:
+            while True:
+                flag = False
+                for i in range(pool_length):
+                    if not p_list[i].is_alive():
+                        p_list[i] = multiprocessing.Process(target=main, args=(cls_list, path, index, row))
+                        p_list[i].start()
+                        flag = True
+                        break
+                if flag:
+                    break
+                else:
+                    time.sleep(60)
 
 
 
