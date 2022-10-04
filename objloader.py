@@ -17,20 +17,23 @@ def MTL(filename):
         elif mtl is None:
             raise (ValueError, "mtl file doesn't start with newmtl stmt")
         elif values[0] == 'map_Kd':
-            # load the texture referred to by this declaration
-            mtl[values[0]] = values[1]
-            # print(mtl['map_Kd'])
-            surf = pygame.image.load(mtl['map_Kd'])
-            image = pygame.image.tostring(surf, 'RGB', 1)
-            ix, iy = surf.get_rect().size
-            texid = mtl['texture_Kd'] = glGenTextures(1)
-            glBindTexture(GL_TEXTURE_2D, texid)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                GL_LINEAR)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ix, iy, 0, GL_RGB,
-                GL_UNSIGNED_BYTE, image)
+            try:
+                # load the texture referred to by this declaration
+                mtl[values[0]] = values[1]
+                # print(mtl['map_Kd'])
+                surf = pygame.image.load(mtl['map_Kd'])
+                image = pygame.image.tostring(surf, 'RGB', 1)
+                ix, iy = surf.get_rect().size
+                texid = mtl['texture_Kd'] = glGenTextures(1)
+                glBindTexture(GL_TEXTURE_2D, texid)
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    GL_LINEAR)
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                    GL_LINEAR)
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ix, iy, 0, GL_RGB,
+                    GL_UNSIGNED_BYTE, image)
+            except:
+                pass
         elif values[0] == 'map_d':
             continue
         else:

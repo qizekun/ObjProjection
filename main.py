@@ -11,21 +11,6 @@ import os
 import time
 import multiprocessing
 
-path = "/Users/qizekun/Downloads/ShapeNetCore/"
-meta = pd.read_json(path + "shapenet55.json")
-cls_list = meta['describe'].values.tolist()
-
-acc = []
-acc_detail = []
-p_list = []
-flag = []
-pwd = os.getcwd()
-complete_num = 1
-length = len(cls_list)
-for i in range(length):
-    acc.append([])
-    acc_detail.append([])
-    flag.append(0)
 
 def render(path="model_normalized.obj", angle=45, size=1024):
     viewport = (size, size)
@@ -96,50 +81,34 @@ def test_clip(model, preprocess, path, cls_list):
     # print("Label probs:", probs)
 
 def main(cls_list, path, index, row):
-    global acc, acc_detail, complete_num, flag
     model, preprocess = clip.load("ViT-B/32", device="cpu")
     obj_list = glob.glob(path + "0" + str(row.catalogue) + "/*")
-    num = len(obj_list)
-    right_num = 0
     for obj_path in obj_list:
+        if os.path.exists(obj_path + "/models/angle315.png"):
+            continue 
         prediction = []
         for angle in (45, 135, 225, 315):
             os.chdir(obj_path + "/models")
             render(angle=angle)
             prediction.append(test_clip(model, preprocess, f'angle{angle}.png', cls_list))
         prediction = np.max(np.array(prediction), axis=0)
-        acc_detail[index].append(prediction[index])
         if np.argmax(prediction) == index:
-            right_num += 1
             print('right!')
         else:
             print('wrong!')
             print(obj_path)
-        complete_num += 1
-        time.sleep(1)
-        # this_time = time.time()
-        # print(f"ETA: {(51300 - complete_num) / complete_num * (this_time - start_time) / 3600} h")
-    acc[index] = right_num / num
-    flag[index] = 1
     
-def moniter(start_time):
-    global acc, acc_detail, complete_num, flag, pwd
-    while True:
-        time.sleep(60)
-        this_time = time.time()
-        print(f"ETA: {(51300 - complete_num) / complete_num * (this_time - start_time) / 3600} h")
-        if sum(flag) == len(flag):
-            os.chdir(pwd)  
-            np.save('acc.npy', np.array(acc))
-            np.save('acc_detail.npy', np.array(acc_detail))
-            break
 
 if __name__ == "__main__":
-    pool_length = 8
+    path = "/Users/qizekun/Downloads/ShapeNetCore/"
+    meta = pd.read_json(path + "shapenet55.json")
+    cls_list = meta['describe'].values.tolist()
 
-    start_time = time.time()
-    moniter_process = multiprocessing.Process(target=moniter, args=(start_time, ))
-    moniter_process.start()
+    p_list = []
+    pwd = os.getcwd()
+    length = len(cls_list)
+
+    pool_length = 8
 
     for index, row in meta.iterrows():
         if len(p_list) < pool_length:
